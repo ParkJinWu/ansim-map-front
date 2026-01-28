@@ -4,11 +4,11 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { loginSchema, type LoginFormValues } from "@/src/features/auth/schema";
-import { useLoginMutation } from "@/src/features/auth/api";
-import { Input } from "@/src/components/ui/input";
-import { ButtonLoading } from "@/src/components/ui/button";
-import { ErrorMessage } from "@/src/components/ui/form";
+import { loginSchema, type LoginFormValues } from "@/features/auth/schema";
+import { useLoginMutation } from "@/features/auth/api";
+import { Input } from "@/components/ui/input";
+import { ButtonLoading } from "@/components/ui/button";
+import { ErrorMessage } from "@/components/ui/form";
 
 export default function LoginPage() {
   const router = useRouter();

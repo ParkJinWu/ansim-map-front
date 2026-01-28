@@ -5,10 +5,10 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import * as z from 'zod';
-import { Input } from "@/src/components/ui/input";
-import { ButtonLoading } from "@/src/components/ui/button";
-import { ErrorMessage } from "@/src/components/ui/form";
-import { apiClient } from "@/src/lib/axios";
+import { Input } from "@/components/ui/input";
+import { ButtonLoading } from "@/components/ui/button";
+import { ErrorMessage } from "@/components/ui/form";
+import { apiClient } from "@/lib/axios";
 
 // Zod 스키마 정의
 const signUpSchema = z.object({

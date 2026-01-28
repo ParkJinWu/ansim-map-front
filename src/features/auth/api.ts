@@ -1,5 +1,5 @@
 // src/features/auth/api.ts
-import { apiClient } from '@/src/lib/axios';
+import { apiClient } from '@/lib/axios';
 import { useMutation } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 
@@ -18,8 +18,9 @@ interface SignUpRequest {
 
 // 토큰 응답 타입
 interface TokenResponse {
-  token: string;
-  type: string;
+  accessToken: string;
+  refreshToken: string;
+  grantType: string;
 }
 
 // 로그인 API 함수
@@ -41,7 +42,7 @@ export const useLoginMutation = () => {
     onSuccess: (tokenResponse) => {
       // 토큰 저장
       saveTokens(tokenResponse);
-      
+
       // 로그인 성공 후 메인 페이지로 이동
       router.push('/');
     },
@@ -63,19 +64,44 @@ export const signUpApi = async (userData: SignUpRequest): Promise<void> => {
 
 // 로그아웃 API 함수
 export const logoutApi = async (): Promise<void> => {
-  try {
-    await apiClient.post('/auth/logout');
-    // 토큰 제거 로직
+  const token = localStorage.getItem('accessToken');
+
+  // 브라우저 콘솔에서 이 로그를 확인하세요! (F12)
+  console.log("전송될 토큰의 원본 값:", token);
+
+  // 토큰이 없으면 굳이 서버에 요청하지 않고 클라이언트만 정리합니다.
+  if (!token || token === 'undefined' || token === 'null') {
+    console.warn("전송할 토큰이 없습니다. 클라이언트 상태만 정리합니다.");
     removeTokens();
+    window.location.href = '/';
+    return;
+  }
+
+  try {
+    await apiClient.post('/auth/logout', null, {
+      headers: {
+        // 인터셉터가 중복으로 'Bearer'를 붙이지 않는지 확인하며 수동 주입
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    console.log("서버 로그아웃 성공");
   } catch (error: any) {
-    throw error.response?.data || new Error('로그아웃에 실패했습니다.');
+    console.error("서버 로그아웃 에러:", error.message);
+  } finally {
+    removeTokens();
+    localStorage.removeItem('userEmail');
+    //window.location.href = '/';
   }
 };
 
+
 // 토큰 저장 유틸리티
 export const saveTokens = (tokenResponse: TokenResponse) => {
-  localStorage.setItem('accessToken', tokenResponse.token);
-  localStorage.setItem('tokenType', tokenResponse.type);
+  // 백엔드 필드명인 accessToken과 grantType을 사용합니다.
+  if (tokenResponse.accessToken) {
+    localStorage.setItem('accessToken', tokenResponse.accessToken);
+    localStorage.setItem('tokenType', tokenResponse.grantType);
+  } 
 };
 
 // 토큰 제거 유틸리티

@@ -37,24 +37,22 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
+    // 백엔드 에러 응답 구조에 맞춰 메시지 추출
     const errorMessage = 
       error.response?.data?.message || 
-      error.response?.data || 
       error.message || 
       '알 수 없는 오류가 발생했습니다.';
 
-    //  TODO : 401 에러(토큰 만료) 발생 시 처리 로직 추가
+    console.error('API 에러 발생:', {
+      status: error.response?.status,
+      message: errorMessage,
+      url: error.config?.url
+    });
+
+  
     if (error.response?.status === 401) {
-      console.warn('인증이 만료되었습니다. 다시 로그인해주세요.');
-      // TODO : 여기서 RefreshToken을 이용한 재발급 로직을 실행하거나 로그아웃 처리
+      console.warn('인증이 만료되었습니다.');
     }
-
-    console.error('API 에러:', errorMessage);
-
-    if (error.config?.showErrorDialog) {
-      window.alert(errorMessage);
-    }
-
-    return Promise.reject(new Error(errorMessage));
+    return Promise.reject(error); 
   }
 );

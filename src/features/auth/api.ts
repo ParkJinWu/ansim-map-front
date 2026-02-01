@@ -27,7 +27,8 @@ interface TokenResponse {
 export const loginApi = async (credentials: LoginRequest): Promise<TokenResponse> => {
   try {
     const response = await apiClient.post('/auth/login', credentials);
-    return response.data;
+
+    return response.data.data;
   } catch (error: any) {
     throw error.response?.data || new Error('로그인에 실패했습니다.');
   }
@@ -97,11 +98,14 @@ export const logoutApi = async (): Promise<void> => {
 
 // 토큰 저장 유틸리티
 export const saveTokens = (tokenResponse: TokenResponse) => {
-  // 백엔드 필드명인 accessToken과 grantType을 사용합니다.
-  if (tokenResponse.accessToken) {
+  if (tokenResponse && tokenResponse.accessToken) {
     localStorage.setItem('accessToken', tokenResponse.accessToken);
     localStorage.setItem('tokenType', tokenResponse.grantType);
-  } 
+
+    window.dispatchEvent(new Event("auth-change"));
+  } else {
+    console.error("저장할 토큰이 없습니다. 응답 구조를 확인하세요:", tokenResponse);
+  }
 };
 
 // 토큰 제거 유틸리티

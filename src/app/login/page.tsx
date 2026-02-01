@@ -9,8 +9,10 @@ import { useLoginMutation } from "@/features/auth/api";
 import { Input } from "@/components/ui/input";
 import { ButtonLoading } from "@/components/ui/button";
 import { ErrorMessage } from "@/components/ui/form";
+import { useDialog } from "@/components/dialog/useDialog";
 
 export default function LoginPage() {
+  const { alert } = useDialog();
   const router = useRouter();
   const loginMutation = useLoginMutation();
 
@@ -21,16 +23,16 @@ export default function LoginPage() {
 
   const onSubmit = (data: LoginFormValues) => {
     loginMutation.mutate(data, {
-      onSuccess: () => {
-        // 로그인 성공 시 메인 지도로 이동
-        router.push("/");
-      },
-      onError: (error: any) => {
-        // 기본 브라우저 alert 대신 다른 방식으로 에러 처리
-        window.alert("아이디 또는 비밀번호가 일치하지 않습니다.");
-      },
+      onError: async () => {
+        // 이제 진짜 이 예쁜 알림이 뜹니다!
+        await alert("아이디 또는 비밀번호가 일치하지 않습니다.", {
+          theme: "warning",
+          title: "로그인 실패"
+        });
+      }
     });
   };
+
   return (
     <main className="relative grid h-screen place-content-center">
       {/* 배경 레이어 */}

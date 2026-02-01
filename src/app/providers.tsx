@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
+import { DialogProvider } from "@/components/dialog/context";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   // useState를 사용하여 클라이언트 사이드에서 단 한 번만 QueryClient가 생성되도록 합니다.
@@ -17,7 +18,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {children}
+      <DialogProvider>
+        {children}
+      </DialogProvider>
     </QueryClientProvider>
   );
 }

@@ -24,18 +24,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     if (isConfirmed) {
       try {
         const email = localStorage.getItem("userEmail");
-        // API 호출 (Header에 있던 로직)
         await apiClient.post("/auth/logout", email, {
           headers: { "Content-Type": "text/plain" }
         });
       } catch (error) {
         console.error("로그아웃 실패:", error);
       } finally {
-        // 상태 초기화 및 페이지 이동
         localStorage.removeItem("accessToken");
         localStorage.removeItem("userEmail");
-        window.dispatchEvent(new Event("auth-change")); // 헤더 상태 업데이트용
-        onClose(); // 사이드바 닫기
+        window.dispatchEvent(new Event("auth-change"));
+        onClose();
         window.location.href = "/";
       }
     }
@@ -43,37 +41,39 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   return (
     <aside
-      className={`fixed top-0 left-0 z-50 h-full w-72 bg-white border-r border-sky-100 flex flex-col transition-transform duration-300 ease-in-out ${
+      className={`fixed top-0 left-0 z-50 h-full w-72 bg-sky-50 border-r border-sky-100 flex flex-col transition-transform duration-300 ease-in-out shadow-2xl shadow-sky-900/10 ${
         isOpen ? "translate-x-0" : "-translate-x-full"
       }`}
     >
-      {/* 1. 상단 헤더 */}
-      <div className="flex items-center justify-between px-6 h-16 border-b border-sky-50 flex-shrink-0">
-        <span className="text-xl font-bold text-sky-600">ANSIM MAP</span>
-        <button onClick={onClose} className="p-1 hover:bg-sky-50 rounded-lg">
-          <X className="w-6 h-6 text-gray-400" />
+      {/* 1. 상단 헤더 - 로고 영역 */}
+      <div className="flex items-center justify-between px-6 h-16 border-b border-sky-100/50 bg-sky-100/20 flex-shrink-0">
+        <span className="text-xl font-black text-sky-500 tracking-tight">ANSIM <span className="text-sky-400 font-light">MAP</span></span>
+        <button 
+          onClick={onClose} 
+          className="p-1.5 hover:bg-white rounded-lg transition-colors text-sky-300 hover:text-sky-500 shadow-sm shadow-sky-100/50"
+        >
+          <X className="w-5 h-5" />
         </button>
       </div>
 
-      {/* 2. 메인 메뉴 (중간 영역을 가득 채움) */}
-      <nav className="p-4 space-y-1 flex-1 overflow-y-auto">
+      {/* 2. 메인 메뉴 */}
+      <nav className="p-4 space-y-2 flex-1 overflow-y-auto font-sans">
         <SidebarItem href="/" icon={<Home size={20} />} label="홈" onClick={onClose} />
         <SidebarItem href="/map" icon={<ShieldCheck size={20} />} label="안심 지도" onClick={onClose} />
         <SidebarItem href="/mypage" icon={<User size={20} />} label="마이페이지" onClick={onClose} />
       </nav>
 
-      
       {/* 3. 하단 로그아웃 영역 */}
-      <div className="mt-auto">
-        <div className="mx-4 border-t border-gray-200" />
-        
-        <div className="py-2 px-4">
+      <div className="mt-auto pb-4">
+        {/* 구분선도 스카이 톤으로 변경 */}
+        <div className="mx-6 border-t border-sky-200/50 mb-2" />
+        <div className="px-4">
           <button
             onClick={handleLogout}
-            className="flex items-center w-full gap-4 px-4 py-3 text-gray-500 hover:bg-red-50 hover:text-red-500 rounded-xl transition-all group"
+            className="flex items-center w-full gap-4 px-4 py-3 text-sky-400 hover:bg-red-50 hover:text-red-500 rounded-2xl transition-all group"
           >
-            <LogOut size={20} className="group-hover:rotate-12 transition-transform text-gray-400 group-hover:text-red-500" />
-            <span className="font-semibold">로그아웃</span>
+            <LogOut size={20} className="group-hover:-translate-x-1 transition-transform" />
+            <span className="font-bold">로그아웃</span>
           </button>
         </div>
       </div>
@@ -86,10 +86,10 @@ function SidebarItem({ href, icon, label, onClick }: { href: string; icon: React
     <Link
       href={href}
       onClick={onClick}
-      className="flex items-center gap-4 px-4 py-3 text-gray-600 hover:bg-sky-50 hover:text-sky-600 rounded-xl transition-all"
+      className="flex items-center gap-4 px-4 py-3 text-sky-600/80 hover:bg-sky-400 hover:text-white rounded-2xl transition-all font-bold group shadow-sm shadow-transparent hover:shadow-sky-200"
     >
-      {icon}
-      <span className="font-medium">{label}</span>
+      <span className="group-hover:scale-110 transition-transform">{icon}</span>
+      <span>{label}</span>
     </Link>
   );
 }

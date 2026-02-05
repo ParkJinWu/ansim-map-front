@@ -1,10 +1,14 @@
 import { apiClient } from "@/lib/axios";
-import { TmapRouteResponse, RouteRequestParams, TmapItinerary } from "./type";
+import { TmapCarRouteResponse } from "./type";
 
-export const getTransitPath = async (params: RouteRequestParams): Promise<TmapItinerary[]> => {
-  const { data } = await apiClient.get<TmapRouteResponse>("api/v1/path/transit", {
-    params
+export const getCarPath = async (params: {
+  sx: string;
+  sy: string;
+  ex: string;
+  ey: string;
+}): Promise<TmapCarRouteResponse[]> => { 
+  const { data } = await apiClient.get<TmapCarRouteResponse[]>("/api/v1/tmap/path/car", {
+    params,
   });
-
-  return data.metaData.plan.itineraries;
+  return data;
 };

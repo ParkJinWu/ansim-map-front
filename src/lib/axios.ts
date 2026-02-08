@@ -18,29 +18,37 @@ export const apiClient = axios.create({
   showLoading: false,
 } as AxiosRequestConfig);
 
-// 1. 요청 인터셉터: 모든 API 요청 전에 실행됨
+// 요청 인터셉터: 모든 API 요청 전에 실행됨
 apiClient.interceptors.request.use(
   (config) => {
-    // 로컬 스토리지에서 액세스 토큰을 꺼내 헤더에 추가
-    const token = localStorage.getItem('accessToken');
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // Zustand persist가 저장하는 키 이름을 가져옴
+    const authStorage = localStorage.getItem('ansim-auth-storage');
+
+    if (authStorage && config.headers) {
+      try {
+        const parsed = JSON.parse(authStorage);
+        const token = parsed.state?.accessToken; // Zustand에 저장한 필드명
+
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+      } catch (error) {
+        console.error('인증 토큰 파싱 실패:', error);
+      }
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// 2. 응답 인터셉터
+// 응답 인터셉터
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     // 백엔드 에러 응답 구조에 맞춰 메시지 추출
-    const errorMessage = 
-      error.response?.data?.message || 
-      error.message || 
+    const errorMessage =
+      error.response?.data?.message ||
+      error.message ||
       '알 수 없는 오류가 발생했습니다.';
 
     console.error('API 에러 발생:', {
@@ -49,10 +57,10 @@ apiClient.interceptors.response.use(
       url: error.config?.url
     });
 
-  
+
     if (error.response?.status === 401) {
       console.warn('인증이 만료되었습니다.');
     }
-    return Promise.reject(error); 
+    return Promise.reject(error);
   }
 );

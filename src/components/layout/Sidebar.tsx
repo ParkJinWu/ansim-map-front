@@ -65,7 +65,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       {/* 3. 하단 로그아웃 영역 */}
       <div className="mt-auto pb-4">
-        {/* 구분선도 스카이 톤으로 변경 */}
         <div className="mx-6 border-t border-sky-200/50 mb-2" />
         <div className="px-4">
           <button

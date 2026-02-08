@@ -24,7 +24,6 @@ export default function LoginPage() {
   const onSubmit = (data: LoginFormValues) => {
     loginMutation.mutate(data, {
       onError: async () => {
-        // 이제 진짜 이 예쁜 알림이 뜹니다!
         await alert("아이디 또는 비밀번호가 일치하지 않습니다.", {
           theme: "warning",
           title: "로그인 실패"

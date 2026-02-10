@@ -3,23 +3,15 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Menu, User } from "lucide-react";
+import { useAuthStore } from "@/store/useAuthStore";
 
 interface HeaderProps {
   onMenuClick?: () => void;
 }
 
 export default function Header({ onMenuClick }: HeaderProps) {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  useEffect(() => {
-    const syncLoginStatus = () => {
-      const token = localStorage.getItem("accessToken");
-      setIsLoggedIn(!!token);
-    };
-    syncLoginStatus();
-    window.addEventListener("auth-change", syncLoginStatus);
-    return () => window.removeEventListener("auth-change", syncLoginStatus);
-  }, []);
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const isLoggedIn = !!accessToken;
 
   return (
     // 배경을 더 맑은 sky-50으로 변경

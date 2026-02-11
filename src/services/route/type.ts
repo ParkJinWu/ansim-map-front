@@ -2,6 +2,7 @@
 export interface TmapCarRouteResponse {
   type: "FeatureCollection";
   features: TmapFeature[];
+  isAnsimBest?: boolean;
 }
 
 export interface TmapFeature {

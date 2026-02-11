@@ -10,7 +10,7 @@ import RouteMenu from '@/services/route/components/RouteMenu';
 
 export default function AnsimMapPage() {
   const mapContainer = useRef<HTMLDivElement>(null);
-  
+
   // 1. 커스텀 훅 사용 (지도 관련 로직 격리)
   const { initMap, drawRoute } = useMap();
 
@@ -25,17 +25,20 @@ export default function AnsimMapPage() {
   };
 
   // 검색 핸들러
-  const handleSearch = async () => {
+  const handleSearch = async (startAddr: string, endAddr: string) => {
     setLoading(true);
     try {
-      const data = await getCarPath({ sx: "126.9780", sy: "37.5665", ex: "127.0276", ey: "37.4979" });
+      const data = await getCarPath({ startAddr, endAddr });
+
       setCarRoutes(data);
       setSelectedIdx(0);
-      
-      // 첫 검색 시 첫 번째 경로 그리기
-      drawRoute(data[0], getRouteThemeColor(0, data[0]));
+
+      if (data.length > 0) {
+        drawRoute(data[0], getRouteThemeColor(0, data[0]));
+      }
     } catch (err) {
       console.error("경로 탐색 실패:", err);
+      alert("경로 탐색에 실패했습니다. 주소를 다시 확인해주세요.");
     } finally {
       setLoading(false);
     }
@@ -51,13 +54,13 @@ export default function AnsimMapPage() {
   return (
     <main className="relative w-full h-screen bg-white flex overflow-hidden">
       {/* 카카오맵 스크립트 로드 후 initMap 실행 */}
-      <Script 
-        src={`//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_CLIENT_ID}&autoload=false&libraries=services`} 
+      <Script
+        src={`//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_CLIENT_ID}&autoload=false&libraries=services`}
         onLoad={() => {
           if (mapContainer.current) {
             initMap(mapContainer.current);
           }
-        }} 
+        }}
       />
 
       {/* 2. 분리된 메뉴 컴포넌트 사용 */}
@@ -73,7 +76,7 @@ export default function AnsimMapPage() {
       {/* 지도 영역 */}
       <section className="flex-1 relative">
         <div ref={mapContainer} className="w-full h-full" />
-        
+
         {/* 로딩 오버레이 */}
         {loading && (
           <div className="absolute inset-0 bg-white/40 z-50 flex flex-col items-center justify-center backdrop-blur-[2px]">

@@ -1,13 +1,16 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { TMAP_OPTIONS } from '@/constants/routeOptions';
-import { TmapCarRouteResponse } from '../type';
+import { TmapCarRouteResponse, TmapPoi } from '../type';
+import { searchPoi } from '../api';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface RouteMenuProps {
   carRoutes: TmapCarRouteResponse[];
   selectedIdx: number;
   loading: boolean;
-  onSearch: () => void;
+  onSearch: (start: string, end: string) => void;
   onSelect: (idx: number) => void;
   getThemeColor: (idx: number, route: any) => string;
 }
@@ -20,21 +23,115 @@ export default function RouteMenu({
   onSelect,
   getThemeColor,
 }: RouteMenuProps) {
+  // 1. 상태 관리: display(화면 표시용), value(서버 전송용 실제 주소)
+  const [startPoint, setStartPoint] = useState({ display: '', value: '' });
+  const [endPoint, setEndPoint] = useState({ display: '', value: '' });
+  
+  const [startResults, setStartResults] = useState<TmapPoi[]>([]);
+  const [endResults, setEndResults] = useState<TmapPoi[]>([]);
+
+  // 2. 디바운싱: 사용자가 입력하는 텍스트(display)를 감시
+  const debouncedStart = useDebounce(startPoint.display, 300);
+  const debouncedEnd = useDebounce(endPoint.display, 300);
+
+  // 3. 출발지 실시간 검색
+  useEffect(() => {
+    if (debouncedStart.length >= 2) {
+      searchPoi(debouncedStart).then(setStartResults);
+    } else {
+      setStartResults([]);
+    }
+  }, [debouncedStart]);
+
+  // 4. 도착지 실시간 검색
+  useEffect(() => {
+    if (debouncedEnd.length >= 2) {
+      searchPoi(debouncedEnd).then(setEndResults);
+    } else {
+      setEndResults([]);
+    }
+  }, [debouncedEnd]);
+
+  // 5. 장소 선택 핸들러
+  const handleSelectPlace = (type: 'start' | 'end', place: TmapPoi) => {
+    const selectedData = { display: place.name, value: place.fullAddress };
+    if (type === 'start') {
+      setStartPoint(selectedData);
+      setStartResults([]);
+    } else {
+      setEndPoint(selectedData);
+      setEndResults([]);
+    }
+  };
+
   return (
     <aside className="w-[380px] h-full shadow-2xl z-30 flex flex-col bg-white border-r">
-      {/* 검색 헤더 영역 */}
-      <div className="p-6 bg-slate-900 text-white">
-        <h1 className="text-xl font-black mb-6 italic tracking-tighter">🛡️ ANSIM MAP</h1>
+      {/* 상단 검색 영역 */}
+      <div className="p-6 bg-slate-900 text-white space-y-4">
+        <h1 className="text-xl font-black mb-2 italic tracking-tighter text-blue-400">ANSIM MAP</h1>
+        
+        <div className="space-y-3">
+          {/* 출발지 입력 */}
+          <div className="relative">
+            <input 
+              type="text"
+              placeholder="출발지 (예: 서울역)"
+              className="w-full p-3 bg-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all text-white"
+              value={startPoint.display}
+              onChange={(e) => setStartPoint({ display: e.target.value, value: '' })}
+            />
+            {startResults.length > 0 && (
+              <ul className="absolute w-full mt-1 bg-white text-slate-800 rounded-xl shadow-2xl z-[100] max-h-60 overflow-y-auto border border-slate-200">
+                {startResults.map((poi, i) => (
+                  <li 
+                    key={i} 
+                    onClick={() => handleSelectPlace('start', poi)}
+                    className="p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-none"
+                  >
+                    <div className="font-bold text-sm text-slate-900">{poi.name}</div>
+                    <div className="text-[11px] text-slate-500 truncate">{poi.fullAddress}</div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* 도착지 입력 */}
+          <div className="relative">
+            <input 
+              type="text"
+              placeholder="도착지 (예: 강남역)"
+              className="w-full p-3 bg-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all text-white"
+              value={endPoint.display}
+              onChange={(e) => setEndPoint({ display: e.target.value, value: '' })}
+            />
+            {endResults.length > 0 && (
+              <ul className="absolute w-full mt-1 bg-white text-slate-800 rounded-xl shadow-2xl z-[100] max-h-60 overflow-y-auto border border-slate-200">
+                {endResults.map((poi, i) => (
+                  <li 
+                    key={i} 
+                    onClick={() => handleSelectPlace('end', poi)}
+                    className="p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-none"
+                  >
+                    <div className="font-bold text-sm text-slate-900">{poi.name}</div>
+                    <div className="text-[11px] text-slate-500 truncate">{poi.fullAddress}</div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+
         <button
-          onClick={onSearch}
-          disabled={loading}
-          className="w-full py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 rounded-2xl font-bold transition-all active:scale-[0.98]"
+          onClick={() => onSearch(startPoint.value || startPoint.display, endPoint.value || endPoint.display)} 
+          disabled={loading || !startPoint.display || !endPoint.display}
+          className="w-full py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 rounded-2xl font-bold transition-all active:scale-[0.98] mt-2"
         >
-          {loading ? '경로 분석 중...' : '자동차 경로 검색 🚗'}
+          {loading ? '안심 경로 계산 중...' : '경로 검색'}
         </button>
       </div>
 
-      {/* 경로 리스트 영역 */}
+      {/* 하단 경로 리스트 영역 */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50">
         {carRoutes.map((route, idx) => {
           const info = route.features[0].properties;
@@ -46,21 +143,18 @@ export default function RouteMenu({
               key={idx}
               onClick={() => onSelect(idx)}
               className={`p-4 rounded-2xl cursor-pointer transition-all border-2 ${
-                isSelected
-                  ? 'bg-white shadow-md'
-                  : 'bg-slate-100 border-transparent opacity-70 hover:opacity-100'
+                isSelected 
+                  ? 'bg-white shadow-md' 
+                  : 'bg-white/50 border-transparent opacity-70 hover:opacity-100 hover:bg-white'
               }`}
               style={{ borderColor: isSelected ? themeColor : 'transparent' }}
             >
               <div className="flex justify-between items-start mb-2">
                 <span
-                  className="text-[10px] font-bold px-2 py-0.5 rounded"
-                  style={{
-                    backgroundColor: `${themeColor}15`,
-                    color: themeColor,
-                  }}
+                  className="text-[10px] font-bold px-2 py-1 rounded"
+                  style={{ backgroundColor: `${themeColor}15`, color: themeColor }}
                 >
-                  {TMAP_OPTIONS[idx]?.name}
+                  {TMAP_OPTIONS[idx]?.name || '추천 경로'}
                   {route.isAnsimBest && " 🛡️"}
                 </span>
                 <span className="text-lg font-black text-slate-800">
@@ -68,10 +162,8 @@ export default function RouteMenu({
                 </span>
               </div>
               <div className="text-xs text-slate-500 flex justify-between items-center">
-                <div className="space-x-2">
-                  <span className="font-semibold text-slate-700">
-                    {(info.totalDistance! / 1000).toFixed(1)}km
-                  </span>
+                <div className="space-x-2 font-medium">
+                  <span className="text-slate-700">{(info.totalDistance! / 1000).toFixed(1)}km</span>
                   <span>·</span>
                   <span>약 {info.taxiFare?.toLocaleString()}원</span>
                 </div>
@@ -80,10 +172,13 @@ export default function RouteMenu({
           );
         })}
         
-        {/* 데이터가 없을 때의 피드백 */}
+        {/* 초기 상태 안내 */}
         {!loading && carRoutes.length === 0 && (
-          <div className="h-full flex flex-col items-center justify-center text-slate-400 py-20 text-center">
-            <p className="text-sm">출발지와 목적지를 설정하고<br/>경로를 검색해보세요.</p>
+          <div className="h-full flex flex-col items-center justify-center text-slate-400 py-20 text-center space-y-3">
+            <div className="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center text-2xl opacity-50">📍</div>
+            <p className="text-sm font-medium leading-relaxed">
+              출발지와 목적지를 입력하고<br/>안전한 데이터 기반 경로를 확인하세요.
+            </p>
           </div>
         )}
       </div>

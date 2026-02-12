@@ -14,7 +14,6 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const isLoggedIn = !!accessToken;
 
   return (
-    // 배경을 더 맑은 sky-50으로 변경
     <header className="flex h-16 w-full items-center justify-between px-6 bg-sky-50/90 backdrop-blur-sm border-b border-sky-100 sticky top-0 z-30 transition-all">
       
       {/* 왼쪽: 메뉴 버튼 & 로고 */}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
     Search,
     ChevronLeft,
@@ -8,10 +8,11 @@ import {
     Clock,
     MapPin,
     Navigation,
-    Info
+    Star
 } from 'lucide-react';
 import { searchPoi } from '@/services/route/api';
 import { getPoiDetail } from '@/services/plcae/api';
+import { getFavorites, addFavorite, deleteFavorite } from '@/services/favorite/api';
 import { TmapPoi } from '@/services/route/type';
 import { useDebounce } from '@/hooks/useDebounce';
 
@@ -26,8 +27,14 @@ export default function PlaceMenu({ onMoveMap, onSetRoute }: PlaceMenuProps) {
     const [selectedPlace, setSelectedPlace] = useState<any>(null);
     const [loading, setLoading] = useState(false);
 
+    // 즐겨찾기 관련 상태
+    const [isFavorite, setIsFavorite] = useState(false);
+    const [favoriteId, setFavoriteId] = useState<number | null>(null);
+    const [actionLoading, setActionLoading] = useState(false);
+
     const debouncedKeyword = useDebounce(keyword, 300);
 
+    // 1. POI 검색 로직
     useEffect(() => {
         if (debouncedKeyword.length >= 2 && !selectedPlace) {
             searchPoi(debouncedKeyword).then((res) => {
@@ -38,13 +45,38 @@ export default function PlaceMenu({ onMoveMap, onSetRoute }: PlaceMenuProps) {
         }
     }, [debouncedKeyword, selectedPlace]);
 
+    // 2. 즐겨찾기 상태 체크 함수
+    const checkFavoriteStatus = useCallback(async (currentPoiId: string) => {
+        try {
+            const favorites = await getFavorites();
+            const found = favorites.find(fav => fav.poiId === currentPoiId);
+
+            if (found) {
+                setIsFavorite(true);
+                setFavoriteId(found.id);
+            } else {
+                setIsFavorite(false);
+                setFavoriteId(null);
+            }
+        } catch (error) {
+            console.error("즐겨찾기 확인 실패:", error);
+        }
+    }, []);
+
+    // 3. 상세 정보 로드
     const handleDetail = async (poiId: string) => {
         setLoading(true);
         try {
             const detail = await getPoiDetail(poiId);
-            setSelectedPlace(detail);
-            if (detail?.lat && detail?.lon) {
-                onMoveMap(detail.lat, detail.lon);
+            const targetDetail = (detail as any).poiDetailInfo || detail;
+
+            setSelectedPlace(targetDetail);
+
+            // Tmap에서 준 고유 ID를 넘겨서 대조.
+            await checkFavoriteStatus(targetDetail.id);
+
+            if (targetDetail?.lat && targetDetail?.lon) {
+                onMoveMap(targetDetail.lat, targetDetail.lon);
             }
         } catch (error) {
             console.error("상세 정보 로드 실패", error);
@@ -53,10 +85,38 @@ export default function PlaceMenu({ onMoveMap, onSetRoute }: PlaceMenuProps) {
         }
     };
 
+    // 4. 즐겨찾기 토글 (추가/삭제)
+    const handleFavoriteToggle = async () => {
+        if (!selectedPlace || actionLoading) return;
+        setActionLoading(true);
+
+        try {
+            if (isFavorite && favoriteId) {
+                await deleteFavorite(favoriteId);
+                setIsFavorite(false);
+                setFavoriteId(null);
+            } else {
+                const newFav = await addFavorite({
+                    poiId: selectedPlace.id,
+                    alias: selectedPlace.name,
+                    placeName: selectedPlace.name,
+                    addressName: selectedPlace.address,
+                    latitude: parseFloat(selectedPlace.lat),
+                    longitude: parseFloat(selectedPlace.lon),
+                });
+                setIsFavorite(true);
+                setFavoriteId(newFav.id);
+            }
+        } catch (error) {
+            console.error("즐겨찾기 처리 실패:", error);
+            alert("즐겨찾기 처리 중 오류가 발생했습니다.");
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
     return (
-        // 전체 배경을 아주 연한 스카이 블루 톤으로 설정
-        <div className="flex flex-col h-full bg-[#f0f9ff]"> 
-            {/* 1. 검색창 영역 */}
+        <div className="flex flex-col h-full bg-[#f0f9ff]">
             {!selectedPlace && (
                 <div className="p-5 border-b border-sky-100">
                     <div className="relative">
@@ -74,7 +134,6 @@ export default function PlaceMenu({ onMoveMap, onSetRoute }: PlaceMenuProps) {
 
             <div className="flex-1 overflow-y-auto">
                 {selectedPlace ? (
-                    /* 2. 장소 상세 정보 영역 */
                     <div className="p-6 space-y-6 animate-in fade-in slide-in-from-right-5">
                         <button
                             onClick={() => setSelectedPlace(null)}
@@ -84,7 +143,21 @@ export default function PlaceMenu({ onMoveMap, onSetRoute }: PlaceMenuProps) {
                             목록으로
                         </button>
 
-                        <div className="bg-white p-5 rounded-3xl shadow-md shadow-sky-100 border border-sky-50">
+                        <div className="bg-white p-5 rounded-3xl shadow-md shadow-sky-100 border border-sky-50 relative">
+                            {/* ⭐️ 즐겨찾기 토글 버튼 */}
+                            <button
+                                onClick={handleFavoriteToggle}
+                                disabled={actionLoading}
+                                className="absolute top-5 right-5 p-2 rounded-full hover:bg-yellow-50 transition-colors active:scale-90"
+                            >
+                                <Star
+                                    className={`w-6 h-6 transition-all ${isFavorite
+                                        ? 'fill-yellow-400 text-yellow-400'
+                                        : 'text-slate-200'
+                                        }`}
+                                />
+                            </button>
+
                             <div className="flex items-center gap-2">
                                 <span className="text-[10px] font-bold text-white bg-sky-400 px-2 py-0.5 rounded-full uppercase tracking-wider">
                                     Place
@@ -93,7 +166,7 @@ export default function PlaceMenu({ onMoveMap, onSetRoute }: PlaceMenuProps) {
                                     {selectedPlace.bizName || selectedPlace.middleBizName || "정보"}
                                 </span>
                             </div>
-                            <h2 className="text-2xl font-black text-slate-800 mt-2 leading-tight">{selectedPlace.name}</h2>
+                            <h2 className="text-2xl font-black text-slate-800 mt-2 leading-tight pr-10">{selectedPlace.name}</h2>
                             <div className="flex items-center gap-1 text-sm text-slate-500 mt-2">
                                 <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-sky-400" />
                                 <span>{selectedPlace.address}</span>
@@ -140,7 +213,6 @@ export default function PlaceMenu({ onMoveMap, onSetRoute }: PlaceMenuProps) {
                         </div>
                     </div>
                 ) : (
-                    /* 3. 검색 결과 리스트 */
                     <ul className="p-4 space-y-3">
                         {results.map((poi, i) => (
                             <li

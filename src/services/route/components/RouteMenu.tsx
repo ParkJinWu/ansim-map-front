@@ -56,7 +56,7 @@ export default function RouteMenu({
     }
   };
 
-  // ✅ 검색 실행 로직: 상세주소 + 장소명을 조합하여 전송
+  // 검색 실행 로직: 상세주소 + 장소명을 조합하여 전송
   const handleSearchClick = () => {
     const startFinal = startPoint.value 
       ? `${startPoint.value} ${startPoint.display}` 

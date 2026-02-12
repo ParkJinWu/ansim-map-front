@@ -23,36 +23,28 @@ export default function RouteMenu({
   onSelect,
   getThemeColor,
 }: RouteMenuProps) {
-  // 1. 상태 관리: display(화면 표시용), value(서버 전송용 실제 주소)
+  // 1. 상태 관리: display(화면 표시용 이름), value(백엔드 전송용 상세 주소)
   const [startPoint, setStartPoint] = useState({ display: '', value: '' });
   const [endPoint, setEndPoint] = useState({ display: '', value: '' });
   
   const [startResults, setStartResults] = useState<TmapPoi[]>([]);
   const [endResults, setEndResults] = useState<TmapPoi[]>([]);
 
-  // 2. 디바운싱: 사용자가 입력하는 텍스트(display)를 감시
   const debouncedStart = useDebounce(startPoint.display, 300);
   const debouncedEnd = useDebounce(endPoint.display, 300);
 
-  // 3. 출발지 실시간 검색
+  // 실시간 POI 검색
   useEffect(() => {
-    if (debouncedStart.length >= 2) {
-      searchPoi(debouncedStart).then(setStartResults);
-    } else {
-      setStartResults([]);
-    }
+    if (debouncedStart.length >= 2) searchPoi(debouncedStart).then(setStartResults);
+    else setStartResults([]);
   }, [debouncedStart]);
 
-  // 4. 도착지 실시간 검색
   useEffect(() => {
-    if (debouncedEnd.length >= 2) {
-      searchPoi(debouncedEnd).then(setEndResults);
-    } else {
-      setEndResults([]);
-    }
+    if (debouncedEnd.length >= 2) searchPoi(debouncedEnd).then(setEndResults);
+    else setEndResults([]);
   }, [debouncedEnd]);
 
-  // 5. 장소 선택 핸들러
+  // 장소 선택 핸들러: 이름과 상세 주소를 각각 저장
   const handleSelectPlace = (type: 'start' | 'end', place: TmapPoi) => {
     const selectedData = { display: place.name, value: place.fullAddress };
     if (type === 'start') {
@@ -64,9 +56,22 @@ export default function RouteMenu({
     }
   };
 
+  // ✅ 검색 실행 로직: 상세주소 + 장소명을 조합하여 전송
+  const handleSearchClick = () => {
+    const startFinal = startPoint.value 
+      ? `${startPoint.value} ${startPoint.display}` 
+      : startPoint.display;
+      
+    const endFinal = endPoint.value 
+      ? `${endPoint.value} ${endPoint.display}` 
+      : endPoint.display;
+
+    onSearch(startFinal, endFinal);
+  };
+
   return (
     <aside className="w-[380px] h-full shadow-2xl z-30 flex flex-col bg-white border-r">
-      {/* 상단 검색 영역 */}
+      {/* 1. 상단 검색 영역 */}
       <div className="p-6 bg-slate-900 text-white space-y-4">
         <h1 className="text-xl font-black mb-2 italic tracking-tighter text-blue-400">ANSIM MAP</h1>
         
@@ -76,7 +81,7 @@ export default function RouteMenu({
             <input 
               type="text"
               placeholder="출발지 (예: 서울역)"
-              className="w-full p-3 bg-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all text-white"
+              className="w-full p-3 bg-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"
               value={startPoint.display}
               onChange={(e) => setStartPoint({ display: e.target.value, value: '' })}
             />
@@ -101,7 +106,7 @@ export default function RouteMenu({
             <input 
               type="text"
               placeholder="도착지 (예: 강남역)"
-              className="w-full p-3 bg-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all text-white"
+              className="w-full p-3 bg-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"
               value={endPoint.display}
               onChange={(e) => setEndPoint({ display: e.target.value, value: '' })}
             />
@@ -123,7 +128,7 @@ export default function RouteMenu({
         </div>
 
         <button
-          onClick={() => onSearch(startPoint.value || startPoint.display, endPoint.value || endPoint.display)} 
+          onClick={handleSearchClick} 
           disabled={loading || !startPoint.display || !endPoint.display}
           className="w-full py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 rounded-2xl font-bold transition-all active:scale-[0.98] mt-2"
         >
@@ -131,7 +136,7 @@ export default function RouteMenu({
         </button>
       </div>
 
-      {/* 하단 경로 리스트 영역 */}
+      {/* 2. 하단 경로 리스트 영역 */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50">
         {carRoutes.map((route, idx) => {
           const info = route.features[0].properties;
@@ -172,7 +177,6 @@ export default function RouteMenu({
           );
         })}
         
-        {/* 초기 상태 안내 */}
         {!loading && carRoutes.length === 0 && (
           <div className="h-full flex flex-col items-center justify-center text-slate-400 py-20 text-center space-y-3">
             <div className="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center text-2xl opacity-50">📍</div>

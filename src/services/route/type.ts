@@ -22,6 +22,7 @@ export interface TmapFeature {
 }
 
 export interface TmapPoi {
+  id: string;
   name: string;           // 장소명
   upperAddrName: string;  // 시/도
   middleAddrName: string; // 구/군

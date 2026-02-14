@@ -1,3 +1,4 @@
+import { useAuthStore } from '@/store/useAuthStore';
 import axios, { AxiosRequestConfig } from 'axios';
 
 declare module 'axios' {
@@ -42,25 +43,29 @@ apiClient.interceptors.request.use(
 );
 
 // 응답 인터셉터
+// 응답 인터셉터 수정
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    // 백엔드 에러 응답 구조에 맞춰 메시지 추출
     const errorMessage =
       error.response?.data?.message ||
       error.message ||
       '알 수 없는 오류가 발생했습니다.';
 
-    console.error('API 에러 발생:', {
-      status: error.response?.status,
-      message: errorMessage,
-      url: error.config?.url
-    });
-
-
+    // 401 Unauthorized: 토큰 만료 또는 유효하지 않은 인증
     if (error.response?.status === 401) {
-      console.warn('인증이 만료되었습니다.');
+      console.warn('인증이 만료되었습니다. 로그아웃 처리합니다.');
+
+      // 1. clearAuth를 사용하여 스토어와 로컬 스토리지를 비웁니다.
+      // 이 메서드는 persist 미들웨어에 의해 'ansim-auth-storage'도 함께 비워줍니다.
+      useAuthStore.getState().clearAuth();
+
+      // 2. 필요하다면 페이지 리다이렉트
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
     }
+
     return Promise.reject(error);
   }
 );

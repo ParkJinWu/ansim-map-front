@@ -15,47 +15,61 @@ import FavoriteModal from '@/services/favorite/components/FavoriteModal';
 export default function MyPage() {
   const router = useRouter();
   const { alert, confirm } = useDialog();
-  const { memberId, email, accessToken, _hasHydrated, clearAuth } = useAuthStore();
+  const { memberId, email, accessToken, clearAuth } = useAuthStore();
 
+  // 1. 상태 관리: 마운트 여부와 로딩 상태 분리
+  const [isMounted, setIsMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  
   const [user, setUser] = useState<MemberResponse | null>(null);
   const [favorites, setFavorites] = useState<FavoriteResponse[]>([]);
-  const [loading, setLoading] = useState(true);
-  
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [newName, setNewName] = useState('');
 
-  // 즐겨찾기 수정 모달 관련
   const [isFavModalOpen, setIsFavModalOpen] = useState(false);
   const [selectedFav, setSelectedFav] = useState<FavoriteResponse | null>(null);
 
+  // 2. [Effect] 컴포넌트 마운트 체크
   useEffect(() => {
-    if (!_hasHydrated) return;
+    setIsMounted(true);
+  }, []);
+
+  // 3. [Effect] 데이터 로딩 및 인증 체크
+  useEffect(() => {
+    // 브라우저에 완전히 마운트되기 전에는 실행하지 않음
+    if (!isMounted) return;
+
+    // 인증 정보가 아예 없는 경우
     if (!accessToken || !memberId) {
-      router.push('/login');
+      router.replace('/login');
       return;
     }
 
     const initData = async () => {
       try {
-        setLoading(true);
         const [profileData, favoriteData] = await Promise.all([
           getMemberProfile(memberId),
           getFavorites()
         ]);
+
         setUser(profileData);
-        setNewName(profileData.name);
         setFavorites(favoriteData);
-      } catch (error) {
-        console.error("데이터 로딩 실패:", error);
-      } finally {
-        setLoading(false);
+        setIsLoading(false); // 모든 데이터 로드 성공 시에만 로딩 해제
+      } catch (error: any) {
+        if (error.response?.status === 401) {
+          clearAuth();
+          router.replace('/login');
+        } else {
+          // 401 외의 에러는 화면을 보여주되 로딩만 끔
+          setIsLoading(false);
+        }
       }
     };
-    initData();
-  }, [_hasHydrated, memberId, accessToken, router]);
 
-  // --- 즐겨찾기 핸들러 (수정/삭제만 유지) ---
-  
+    initData();
+  }, [isMounted, memberId, accessToken, router, clearAuth]);
+
+  // --- 핸들러 로직 (변경 없음) ---
   const handleUpdateFavorite = async (formData: { alias: string }) => {
     if (!selectedFav) return;
     try {
@@ -86,7 +100,6 @@ export default function MyPage() {
     }
   };
 
-  // --- 프로필/로그아웃 핸들러 ---
   const handleLogout = () => {
     removeTokens();
     clearAuth();
@@ -109,7 +122,10 @@ export default function MyPage() {
     }
   };
 
-  if (!_hasHydrated || loading) return <LoadingSkeleton />;
+  // 4. [Render 가드] 마운트 전이거나 로딩 중이면 본문을 절대 그리지 않음
+  if (!isMounted || isLoading) {
+    return <LoadingSkeleton />;
+  }
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
@@ -126,7 +142,11 @@ export default function MyPage() {
         <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <div className="w-16 h-16 bg-sky-500 rounded-full flex items-center justify-center shadow-lg overflow-hidden text-white font-bold text-xl">
-              {user?.profileImageUrl ? <img src={user.profileImageUrl} alt="p" className="w-full h-full object-cover" /> : user?.name.charAt(0)}
+              {user?.profileImageUrl ? (
+                <img src={user.profileImageUrl} alt="p" className="w-full h-full object-cover" />
+              ) : (
+                user?.name.charAt(0)
+              )}
             </div>
             <div>
               <h2 className="text-xl font-black">{user?.name}</h2>
@@ -138,7 +158,7 @@ export default function MyPage() {
           </button>
         </section>
 
-        {/* 즐겨찾기 섹션 (추가 버튼 제거됨) */}
+        {/* 즐겨찾기 섹션 */}
         <section className="space-y-4">
           <div className="flex items-center justify-between px-2">
             <h3 className="text-lg font-bold flex items-center gap-2">
@@ -151,7 +171,7 @@ export default function MyPage() {
               favorites.map((fav) => (
                 <div key={fav.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer relative group">
                   <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button 
+                    <button
                       onClick={(e) => { e.stopPropagation(); setSelectedFav(fav); setIsFavModalOpen(true); }}
                       className="p-1 text-slate-300 hover:text-sky-500"
                     >
@@ -173,7 +193,7 @@ export default function MyPage() {
           </div>
         </section>
 
-        {/* 최근 검색 경로 (UI 유지) */}
+        {/* 최근 검색 경로 */}
         <section className="space-y-4">
           <h3 className="text-lg font-bold px-2 flex items-center gap-2">
             <Clock size={18} className="text-slate-400" /> 최근 검색 경로
@@ -196,12 +216,17 @@ export default function MyPage() {
         </footer>
       </div>
 
-      {/* 프로필 수정 모달 */}
+      {/* 모달들 */}
       {isEditingProfile && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-6 backdrop-blur-sm">
           <div className="bg-white w-full max-w-sm rounded-3xl p-6 space-y-4 shadow-2xl">
             <h3 className="text-lg font-bold text-slate-800">닉네임 변경</h3>
-            <input type="text" className="w-full p-4 bg-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-sky-500" value={newName} onChange={(e) => setNewName(e.target.value)} />
+            <input 
+              type="text" 
+              className="w-full p-4 bg-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-sky-500" 
+              value={newName} 
+              onChange={(e) => setNewName(e.target.value)} 
+            />
             <div className="flex space-x-3 pt-2">
               <button onClick={() => setIsEditingProfile(false)} className="flex-1 p-4 bg-slate-100 rounded-2xl font-bold">취소</button>
               <button onClick={handleUpdateProfile} className="flex-1 p-4 bg-sky-500 text-white rounded-2xl font-bold shadow-lg shadow-sky-200">저장하기</button>
@@ -210,8 +235,7 @@ export default function MyPage() {
         </div>
       )}
 
-      {/* 즐겨찾기 수정 전용 모달 */}
-      <FavoriteModal 
+      <FavoriteModal
         isOpen={isFavModalOpen}
         onClose={() => setIsFavModalOpen(false)}
         onSave={handleUpdateFavorite}

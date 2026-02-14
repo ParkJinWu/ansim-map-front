@@ -51,6 +51,30 @@ export const useMap = () => {
         });
     }, [map]);
 
+    const moveToCurrentPosition = useCallback(() => {
+        if (!map) return;
+
+        // navigator 호출
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    const locPosition = new window.kakao.maps.LatLng(lat, lon);
+
+                    map.panTo(locPosition); // 지도를 부드럽게 이동
+                    map.setLevel(3);       // 적당히 확대
+                },
+                (error) => {
+                    console.error("위치 획득 실패:", error);
+                    alert("위치 정보를 허용해주세요.");
+                }
+            );
+        } else {
+            alert("이 브라우저에서는 위치 기능을 지원하지 않습니다.");
+        }
+    }, [map]);
+
     const drawRoute = useCallback((data: TmapCarRouteResponse, color: string) => {
         if (!map) return;
         currentLines.forEach((line) => line.setMap(null));
@@ -89,5 +113,5 @@ export const useMap = () => {
     }, [map]);
 
 
-    return { map, initMap, drawRoute, moveMap, displayFavoriteMarkers };
+    return { map, initMap, drawRoute, moveMap, displayFavoriteMarkers, moveToCurrentPosition };
 };

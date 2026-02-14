@@ -13,6 +13,7 @@ import { getFavorites } from '@/services/favorite/api';
 import { useEffect } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { FavoriteResponse } from '@/services/favorite/type';
+import { LocateFixed } from 'lucide-react';
 
 const MENU_TABS = [
   { title: "장소 검색", id: "place" },
@@ -21,8 +22,7 @@ const MENU_TABS = [
 
 export default function AnsimMapPage() {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const { map, initMap, drawRoute, moveMap, displayFavoriteMarkers } = useMap();
-
+  const { map, initMap, drawRoute, moveMap, displayFavoriteMarkers, moveToCurrentPosition } = useMap();
   const [activeTab, setActiveTab] = useState("place");
   const [loading, setLoading] = useState(false);
   const [carRoutes, setCarRoutes] = useState<TmapCarRouteResponse[]>([]);
@@ -31,6 +31,8 @@ export default function AnsimMapPage() {
   const [endPoint, setEndPoint] = useState({ display: '', value: '' });
   const [favorites, setFavorites] = useState<FavoriteResponse[]>([]);
   const { isAuthenticated, _hasHydrated } = useAuthStore();
+
+
 
   const getRouteThemeColor = (idx: number, routeData?: TmapCarRouteResponse) => {
     if (routeData?.isAnsimBest) return '#8b5cf6';
@@ -127,6 +129,12 @@ export default function AnsimMapPage() {
 
       <section className="flex-1 relative">
         <div ref={mapContainer} className="w-full h-full" />
+        <button
+          onClick={moveToCurrentPosition}
+          className="absolute bottom-4 right-4 bg-white p-2 rounded-full shadow-lg hover:bg-gray-100 transition-colors z-20"
+        >
+          <LocateFixed className="w-6 h-6 text-gray-700" />
+        </button>
       </section>
     </main>
   );

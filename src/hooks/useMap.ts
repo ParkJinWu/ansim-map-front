@@ -3,13 +3,16 @@
 import { useState, useCallback } from 'react';
 import { TmapCarRouteResponse, TmapFeature } from '@/services/route/type';
 import { FavoriteResponse } from '@/services/favorite/type';
-import { favoriteMarkerContent } from '@/services/favorite/utils/markerTemplates';
+import { favoriteMarkerContent, currentLocationMarkerContent } from '@/services/favorite/utils/markerTemplates';
+
+
 
 export const useMap = () => {
     const [map, setMap] = useState<any>(null);
     const [currentLines, setCurrentLines] = useState<any[]>([]);
     // 즐겨찾기 마커 상태
     const [favoriteMarkers, setFavoriteMarkers] = useState<any[]>([]);
+    const [currentLocationOverlay, setCurrentLocationOverlay] = useState<any>(null); // 내 위치 오버레이 상태
 
     const initMap = useCallback((container: HTMLDivElement) => {
         if (!container) return;
@@ -54,7 +57,6 @@ export const useMap = () => {
     const moveToCurrentPosition = useCallback(() => {
         if (!map) return;
 
-        // navigator 호출
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -62,18 +64,30 @@ export const useMap = () => {
                     const lon = position.coords.longitude;
                     const locPosition = new window.kakao.maps.LatLng(lat, lon);
 
-                    map.panTo(locPosition); // 지도를 부드럽게 이동
-                    map.setLevel(3);       // 적당히 확대
+                    // 1. 지도 이동
+                    map.panTo(locPosition);
+                    map.setLevel(3);
+
+                    // 2. 내 위치 마커(오버레이) 표시
+                    if (currentLocationOverlay) {
+                        // 이미 있다면 위치만 이동
+                        currentLocationOverlay.setPosition(locPosition);
+                        currentLocationOverlay.setMap(map);
+                    } else {
+                        // 없다면 새로 생성
+                        const overlay = new window.kakao.maps.CustomOverlay({
+                            position: locPosition,
+                            content: currentLocationMarkerContent(),
+                            zIndex: 10
+                        });
+                        overlay.setMap(map);
+                        setCurrentLocationOverlay(overlay);
+                    }
                 },
-                (error) => {
-                    console.error("위치 획득 실패:", error);
-                    alert("위치 정보를 허용해주세요.");
-                }
+                (error) => alert("위치 정보를 허용해주세요.")
             );
-        } else {
-            alert("이 브라우저에서는 위치 기능을 지원하지 않습니다.");
         }
-    }, [map]);
+    }, [map, currentLocationOverlay]);
 
     const drawRoute = useCallback((data: TmapCarRouteResponse, color: string) => {
         if (!map) return;

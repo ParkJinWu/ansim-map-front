@@ -37,3 +37,34 @@ export const favoriteMarkerContent = (fav: FavoriteResponse) => {
     </div>
   `;
 };
+
+
+export const currentLocationMarkerContent = () => {
+  return `
+    <div style="position: relative; display: flex; align-items: center; justify-content: center;">
+      <div style="
+        position: absolute;
+        width: 30px;
+        height: 30px;
+        background: rgba(14, 165, 233, 0.4);
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+      "></div>
+      <div style="
+        width: 14px;
+        height: 14px;
+        background: #0ea5e9;
+        border: 2px solid white;
+        border-radius: 50%;
+        box-shadow: 0 0 5px rgba(0,0,0,0.3);
+        z-index: 1;
+      "></div>
+      <style>
+        @keyframes pulse {
+          0% { transform: scale(0.5); opacity: 1; }
+          100% { transform: scale(2.5); opacity: 0; }
+        }
+      </style>
+    </div>
+  `;
+};

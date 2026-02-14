@@ -9,6 +9,10 @@ import { Tab } from '@/components/common/Tab';
 import { TmapCarRouteResponse } from '@/services/route/type';
 import { TMAP_OPTIONS } from '@/constants/routeOptions';
 import { getCarPath } from '@/services/route/api';
+import { getFavorites } from '@/services/favorite/api';
+import { useEffect } from 'react';
+import { useAuthStore } from '@/store/useAuthStore';
+import { FavoriteResponse } from '@/services/favorite/type';
 
 const MENU_TABS = [
   { title: "장소 검색", id: "place" },
@@ -17,7 +21,7 @@ const MENU_TABS = [
 
 export default function AnsimMapPage() {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const { initMap, drawRoute, moveMap } = useMap();
+  const { map, initMap, drawRoute, moveMap, displayFavoriteMarkers } = useMap();
 
   const [activeTab, setActiveTab] = useState("place");
   const [loading, setLoading] = useState(false);
@@ -25,6 +29,8 @@ export default function AnsimMapPage() {
   const [selectedIdx, setSelectedIdx] = useState<number>(0);
   const [startPoint, setStartPoint] = useState({ display: '', value: '' });
   const [endPoint, setEndPoint] = useState({ display: '', value: '' });
+  const [favorites, setFavorites] = useState<FavoriteResponse[]>([]);
+  const { isAuthenticated, _hasHydrated } = useAuthStore();
 
   const getRouteThemeColor = (idx: number, routeData?: TmapCarRouteResponse) => {
     if (routeData?.isAnsimBest) return '#8b5cf6';
@@ -57,6 +63,27 @@ export default function AnsimMapPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const fetchFavorites = async () => {
+      if (_hasHydrated && isAuthenticated) {
+        try {
+          const data = await getFavorites();
+          setFavorites(data); // 데이터를 상태에 저장
+        } catch (err) {
+          console.error("즐겨찾기 목록 로드 에러:", err);
+        }
+      }
+    };
+    fetchFavorites();
+  }, [_hasHydrated, isAuthenticated]);
+
+  // 2. 지도(map)가 준비되면 마커를 그리는 Effect
+  useEffect(() => {
+    if (map && favorites.length > 0) {
+      displayFavoriteMarkers(favorites);
+    }
+  }, [map, favorites, displayFavoriteMarkers]); // 지도가 로드되거나 데이터가 들어오면 실행
 
   return (
     <main className="relative w-full h-screen bg-white flex overflow-hidden">

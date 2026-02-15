@@ -123,7 +123,7 @@ export default function PlaceMenu({ onMoveMap, onSetRoute }: PlaceMenuProps) {
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-sky-400" />
                         <input
                             type="text"
-                            placeholder="어디로 갈까요?"
+                            placeholder="장소를 검색하세요!"
                             className="w-full pl-11 pr-4 py-4 bg-white border-2 border-sky-100 rounded-2xl text-sm text-slate-700 placeholder:text-sky-300 outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-500/10 transition-all shadow-sm"
                             value={keyword}
                             onChange={(e) => setKeyword(e.target.value)}

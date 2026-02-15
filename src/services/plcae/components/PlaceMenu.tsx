@@ -14,6 +14,8 @@ import { getPoiDetail } from '@/services/plcae/api';
 import { getFavorites, addFavorite, deleteFavorite } from '@/services/favorite/api';
 import { TmapPoi } from '@/services/route/type';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useFavoriteStore } from '@/store/useFavoriteStore';
+import { useAuthStore } from '@/store/useAuthStore';
 
 interface PlaceMenuProps {
     onMoveMap: (lat: string, lon: string) => void;
@@ -32,6 +34,9 @@ export default function PlaceMenu({ onMoveMap, onSetRoute }: PlaceMenuProps) {
     const [actionLoading, setActionLoading] = useState(false);
 
     const debouncedKeyword = useDebounce(keyword, 300);
+
+    const { favorites, fetchFavorites } = useFavoriteStore(); // 즐겨찾기 상태 업데이트를 위한 함수 가져오기
+    const { isAuthenticated } = useAuthStore(); // 로그인 여부 확인용
 
     // 1. POI 검색 로직
     useEffect(() => {
@@ -91,21 +96,29 @@ export default function PlaceMenu({ onMoveMap, onSetRoute }: PlaceMenuProps) {
 
         try {
             if (isFavorite && favoriteId) {
+                // 삭제 로직
                 await deleteFavorite(favoriteId);
+                // 즉각적인 UI 반영을 위해 로컬 상태도 함께 해제
                 setIsFavorite(false);
                 setFavoriteId(null);
             } else {
+                // 추가 로직
                 const newFav = await addFavorite({
                     poiId: selectedPlace.id,
                     alias: selectedPlace.name,
                     placeName: selectedPlace.name,
-                    addressName: selectedPlace.address,
+                    addressName: `${selectedPlace.address} ${selectedPlace.firstNo || ''}${selectedPlace.secondNo && selectedPlace.secondNo !== '0' ? '-' + selectedPlace.secondNo : ''}`.trim(),
                     latitude: parseFloat(selectedPlace.lat),
                     longitude: parseFloat(selectedPlace.lon),
                 });
+
                 setIsFavorite(true);
                 setFavoriteId(newFav.id);
             }
+
+            // 전역 스토어의 즐겨찾기 목록을 새로고침
+            await fetchFavorites();
+
         } catch (error) {
             console.error("즐겨찾기 처리 실패:", error);
             alert("즐겨찾기 처리 중 오류가 발생했습니다.");
@@ -131,6 +144,32 @@ export default function PlaceMenu({ onMoveMap, onSetRoute }: PlaceMenuProps) {
                 </div>
             )}
 
+            {isAuthenticated && !keyword && favorites.length > 0 && (
+                <div className="mt-5 p-4 bg-white/80 backdrop-blur-sm rounded-3xl border border-white shadow-[0_8px_20px_rgb(0,0,0,0.06)] animate-in fade-in slide-in-from-top-2">
+                    <div className="flex items-center justify-between mb-3 px-1">
+                        <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-black text-slate-700 uppercase tracking-tight">
+                                즐겨찾는 장소
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                        {favorites.map((fav) => (
+                            <button
+                                key={fav.id}
+                                onClick={() => handleDetail(fav.poiId)}
+                                className="flex-shrink-0 px-4 py-2.5 bg-white border-2 border-sky-400 text-sky-600 rounded-2xl text-xs font-bold hover:bg-sky-400 hover:text-white transition-all active:scale-95 shadow-sm shadow-sky-100 flex items-center gap-1.5"
+                            >
+                                <MapPin size={12} className="opacity-70" />
+                                {fav.alias || fav.placeName}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+
             <div className="flex-1 overflow-y-auto">
                 {selectedPlace ? (
                     <div className="p-6 space-y-6 animate-in fade-in slide-in-from-right-5">
@@ -143,7 +182,7 @@ export default function PlaceMenu({ onMoveMap, onSetRoute }: PlaceMenuProps) {
                         </button>
 
                         <div className="bg-white p-5 rounded-3xl shadow-md shadow-sky-100 border border-sky-50 relative">
-                            {/* ⭐️ 즐겨찾기 토글 버튼 */}
+                            {/* 즐겨찾기 토글 버튼 */}
                             <button
                                 onClick={handleFavoriteToggle}
                                 disabled={actionLoading}

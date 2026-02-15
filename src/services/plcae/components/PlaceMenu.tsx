@@ -7,7 +7,6 @@ import {
     Phone,
     Clock,
     MapPin,
-    Navigation,
     Star
 } from 'lucide-react';
 import { searchPoi } from '@/services/route/api';
@@ -167,9 +166,15 @@ export default function PlaceMenu({ onMoveMap, onSetRoute }: PlaceMenuProps) {
                                 </span>
                             </div>
                             <h2 className="text-2xl font-black text-slate-800 mt-2 leading-tight pr-10">{selectedPlace.name}</h2>
-                            <div className="flex items-center gap-1 text-sm text-slate-500 mt-2">
-                                <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-sky-400" />
-                                <span>{selectedPlace.address}</span>
+                            <div className="flex items-start gap-1 text-sm text-slate-500 mt-2">
+                                <MapPin className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-sky-400" />
+                                <span className="leading-snug">
+                                    {selectedPlace.address}
+                                    {/* 본번이 있으면 한 칸 띄우고 표시 */}
+                                    {selectedPlace.firstNo && ` ${selectedPlace.firstNo}`}
+                                    {/* 부번이 있고 '0'이 아니면 하이픈으로 연결 */}
+                                    {selectedPlace.secondNo && selectedPlace.secondNo !== '0' && `-${selectedPlace.secondNo}`}
+                                </span>
                             </div>
                         </div>
 

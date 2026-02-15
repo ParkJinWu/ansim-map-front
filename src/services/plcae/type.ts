@@ -14,6 +14,8 @@ export interface TmapPoiDetail {
   id: string;
   name: string;
   address: string;        // 전체 주소
+  firstNo ?: string;       // 본번
+  secondNo ?: string;      // 부번
   bizName: string;        // 업종명 (ex: 편의점, 카페)
   upperBizName?: string;  // 업종 대분류
   middleBizName?: string; // 업종 중분류

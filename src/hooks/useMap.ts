@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { TmapCarRouteResponse, TmapFeature } from '@/services/route/type';
 import { FavoriteResponse } from '@/services/favorite/type';
-import { favoriteMarkerContent, currentLocationMarkerContent } from '@/services/favorite/utils/markerTemplates';
+import { favoriteMarkerContent, currentLocationMarkerContent, routePointMarkerContent } from '@/services/favorite/utils/markerTemplates';
 
 
 
@@ -91,31 +91,73 @@ export const useMap = () => {
 
     const drawRoute = useCallback((data: TmapCarRouteResponse, color: string) => {
         if (!map) return;
-        currentLines.forEach((line) => line.setMap(null));
-        const newLines: any[] = [];
+
+        // 1. 기존 요소 제거 (선 + 마커)
+        currentLines.forEach((item) => item.setMap(null));
+        const newItems: any[] = [];
         const bounds = new window.kakao.maps.LatLngBounds();
+
+        // 전체 경로의 좌표들을 모을 배열 (시작/끝점 추출용)
+        const allCoords: any[] = [];
 
         data.features.forEach((feature: TmapFeature) => {
             if (feature.geometry.type === "LineString") {
                 const linePath = feature.geometry.coordinates.map((coord: [number, number]) => {
                     const pos = new window.kakao.maps.LatLng(coord[1], coord[0]);
                     bounds.extend(pos);
+                    allCoords.push(pos); // 모든 좌표 수집
                     return pos;
                 });
 
-                const polyline = new window.kakao.maps.Polyline({
+                // 외곽선과 메인선 그리기 (이전 단계에서 했던 리팩토링 로직)
+                const outline = new window.kakao.maps.Polyline({
                     path: linePath,
-                    strokeWeight: 7,
-                    strokeColor: color,
-                    strokeOpacity: 0.8,
+                    strokeWeight: 11,
+                    strokeColor: '#FFFFFF',
+                    strokeOpacity: 0.7,
+                    lineJoin: 'round',
+                    lineCap: 'round',
                 });
 
-                polyline.setMap(map);
-                newLines.push(polyline);
+                const mainLine = new window.kakao.maps.Polyline({
+                    path: linePath,
+                    strokeWeight: 4,
+                    strokeColor: color,
+                    lineJoin: 'round',
+                    lineCap: 'round',
+                });
+
+                outline.setMap(map);
+                mainLine.setMap(map);
+                newItems.push(outline, mainLine);
             }
         });
 
-        setCurrentLines(newLines);
+        // 2. 출발지/도착지 마커 추가
+        if (allCoords.length > 0) {
+            const startPos = allCoords[0];
+            const endPos = allCoords[allCoords.length - 1];
+
+            // 출발 마커
+            const startMarker = new window.kakao.maps.CustomOverlay({
+                position: startPos,
+                content: routePointMarkerContent('start'),
+                yAnchor: 1 // 마커의 발끝이 좌표에 오도록 설정
+            });
+
+            // 도착 마커
+            const endMarker = new window.kakao.maps.CustomOverlay({
+                position: endPos,
+                content: routePointMarkerContent('end'),
+                yAnchor: 1
+            });
+
+            startMarker.setMap(map);
+            endMarker.setMap(map);
+            newItems.push(startMarker, endMarker);
+        }
+
+        setCurrentLines(newItems); // 관리 리스트 업데이트
         map.setBounds(bounds);
     }, [map, currentLines]);
 

@@ -68,3 +68,32 @@ export const currentLocationMarkerContent = () => {
     </div>
   `;
 };
+
+export const routePointMarkerContent = (type: 'start' | 'end') => {
+  const isStart = type === 'start';
+  const color = isStart ? '#10b981' : '#f43f5e'; // 출발: 초록색, 도착: 빨간색
+  const text = isStart ? '출발' : '도착';
+
+  return `
+    <div style="display: flex; flex-direction: column; align-items: center;">
+      <div style="
+        padding: 4px 8px;
+        background: ${color};
+        color: white;
+        font-size: 11px;
+        font-weight: bold;
+        border-radius: 4px;
+        margin-bottom: 4px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      ">${text}</div>
+      <div style="
+        width: 12px;
+        height: 12px;
+        background: white;
+        border: 3px solid ${color};
+        border-radius: 50%;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      "></div>
+    </div>
+  `;
+};

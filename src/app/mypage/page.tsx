@@ -11,6 +11,10 @@ import { useDialog } from '@/components/dialog/useDialog';
 import { getFavorites, deleteFavorite, updateFavorite } from '@/services/favorite/api';
 import { FavoriteResponse } from '@/services/favorite/type';
 import FavoriteModal from '@/services/favorite/components/FavoriteModal';
+import { getRecentPaths, deleteRecentPath, deleteAllRecentPaths } from '@/services/recentPath/api';
+import { RecentPathResponse } from '@/services/recentPath/type';
+import RecentPathList from '@/app/mypage/RecentPathList';
+import { set } from 'zod';
 
 export default function MyPage() {
   const router = useRouter();
@@ -20,7 +24,7 @@ export default function MyPage() {
   // 1. 상태 관리: 마운트 여부와 로딩 상태 분리
   const [isMounted, setIsMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   const [user, setUser] = useState<MemberResponse | null>(null);
   const [favorites, setFavorites] = useState<FavoriteResponse[]>([]);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -28,6 +32,8 @@ export default function MyPage() {
 
   const [isFavModalOpen, setIsFavModalOpen] = useState(false);
   const [selectedFav, setSelectedFav] = useState<FavoriteResponse | null>(null);
+
+  const [recentPaths, setRecentPaths] = useState<RecentPathResponse[]>([]);
 
   // 2. [Effect] 컴포넌트 마운트 체크
   useEffect(() => {
@@ -47,14 +53,16 @@ export default function MyPage() {
 
     const initData = async () => {
       try {
-        const [profileData, favoriteData] = await Promise.all([
+        const [profileData, favoriteData, recentPathData] = await Promise.all([
           getMemberProfile(memberId),
-          getFavorites()
+          getFavorites(),
+          getRecentPaths()
         ]);
 
         setUser(profileData);
         setFavorites(favoriteData);
         setIsLoading(false); // 모든 데이터 로드 성공 시에만 로딩 해제
+        setRecentPaths(recentPathData);
       } catch (error: any) {
         if (error.response?.status === 401) {
           clearAuth();
@@ -69,7 +77,7 @@ export default function MyPage() {
     initData();
   }, [isMounted, memberId, accessToken, router, clearAuth]);
 
-  // --- 핸들러 로직 (변경 없음) ---
+  // --- 핸들러 로직 ---
   const handleUpdateFavorite = async (formData: { alias: string }) => {
     if (!selectedFav) return;
     try {
@@ -119,6 +127,32 @@ export default function MyPage() {
       alert("프로필이 수정되었습니다.");
     } catch (error) {
       alert("프로필 수정에 실패했습니다.");
+    }
+  };
+
+  const handleDeletePath = async (id: number) => {
+    const isConfirmed = await confirm("검색 기록을 삭제하시겠습니까?", {
+      title: "삭제 확인",
+      theme: "warning",
+    });
+    if (isConfirmed) {
+      try {
+        await deleteRecentPath(id);
+        setRecentPaths(prev => prev.filter(p => p.id !== id));
+      } catch (error) { alert("삭제 실패"); }
+    }
+  };
+
+  const handleClearAllPaths = async () => {
+    const isConfirmed = await confirm("모든 검색 기록을 삭제하시겠습니까?", {
+      title: "삭제 확인",
+      theme: "warning",
+    });
+    if (isConfirmed) {
+      try {
+        await deleteAllRecentPaths();
+        setRecentPaths([]);
+      } catch (error) { alert("삭제 실패"); }
     }
   };
 
@@ -193,21 +227,12 @@ export default function MyPage() {
           </div>
         </section>
 
-        {/* 최근 검색 경로 */}
-        <section className="space-y-4">
-          <h3 className="text-lg font-bold px-2 flex items-center gap-2">
-            <Clock size={18} className="text-slate-400" /> 최근 검색 경로
-          </h3>
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-            <div className="p-4 flex items-center gap-4 border-b border-slate-50 last:border-none">
-              <div className="p-2 bg-slate-100 rounded-xl text-slate-500"><Search size={18} /></div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-slate-800 truncate">평내호평역 → 서울 시청</p>
-                <p className="text-xs text-slate-400 mt-0.5">2026.02.08</p>
-              </div>
-            </div>
-          </div>
-        </section>
+        {/* 최근 검색 경로 섹션 */}
+        <RecentPathList
+          paths={recentPaths}
+          onDelete={handleDeletePath}
+          onClearAll={handleClearAllPaths}
+        />
 
         <footer className="pt-4 text-center">
           <button onClick={handleLogout} className="inline-flex items-center text-sm text-slate-400 font-medium hover:text-red-500 transition-colors">
@@ -221,11 +246,11 @@ export default function MyPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-6 backdrop-blur-sm">
           <div className="bg-white w-full max-w-sm rounded-3xl p-6 space-y-4 shadow-2xl">
             <h3 className="text-lg font-bold text-slate-800">닉네임 변경</h3>
-            <input 
-              type="text" 
-              className="w-full p-4 bg-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-sky-500" 
-              value={newName} 
-              onChange={(e) => setNewName(e.target.value)} 
+            <input
+              type="text"
+              className="w-full p-4 bg-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-sky-500"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
             />
             <div className="flex space-x-3 pt-2">
               <button onClick={() => setIsEditingProfile(false)} className="flex-1 p-4 bg-slate-100 rounded-2xl font-bold">취소</button>

@@ -60,18 +60,20 @@ export default function RouteMenu({
         }
     }, [debouncedEnd, activeInput]);
 
-    // const handleSelectPlace = (type: 'start' | 'end', place: TmapPoi) => {
-    //     const selectedData = { display: place.name, value: place.fullAddress };
-    //     setActiveInput(null);
+    useEffect(() => {
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setStartResults([]);
+                setEndResults([]);
+                setActiveInput(null);
+            }
+        };
 
-    //     if (type === 'start') {
-    //         setStartPoint(selectedData);
-    //         setStartResults([]);
-    //     } else {
-    //         setEndPoint(selectedData);
-    //         setEndResults([]);
-    //     }
-    // };
+        window.addEventListener('keydown', handleEsc);
+
+        // 컴포넌트가 사라질 때 이벤트 리스너 제거 (메모리 누수 방지)
+        return () => window.removeEventListener('keydown', handleEsc);
+    }, []);
 
     // 1. 장소 선택 시 좌표 정보를 함께 세팅
     const handleSelectPlace = (type: 'start' | 'end', place: TmapPoi) => {
@@ -100,8 +102,10 @@ export default function RouteMenu({
             // 좌표가 있는 경우: "경도,위도" 형식으로 전송 (Tmap API 표준)
             if (p.lat && p.lon) {
                 return `${p.lon},${p.lat}`;
+                console.log("좌표로 검색:", { lat: p.lat, lon: p.lon });
             }
             // 직접 입력하여 좌표가 없는 경우: 기존처럼 주소 문자열 전송
+            console.log("주소로 검색:", p.display);
             return p.value || p.display;
         };
 

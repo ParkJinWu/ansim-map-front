@@ -2,16 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { TMAP_OPTIONS } from '@/constants/routeOptions';
-import { TmapCarRouteResponse, TmapPoi } from '../type';
+import { PointState, TmapCarRouteResponse, TmapPoi } from '../type';
 import { searchPoi } from '../api';
 import { useDebounce } from '@/hooks/useDebounce';
 
 interface RouteMenuProps {
     // 부모로부터 제어받는 상태들
-    startPoint: { display: string; value: string };
-    setStartPoint: (val: { display: string; value: string }) => void;
-    endPoint: { display: string; value: string };
-    setEndPoint: (val: { display: string; value: string }) => void;
+    startPoint: PointState;
+    setStartPoint: (val: PointState) => void;
+    endPoint: PointState;
+    setEndPoint: (val: PointState) => void;
 
     carRoutes: TmapCarRouteResponse[];
     selectedIdx: number;
@@ -19,6 +19,8 @@ interface RouteMenuProps {
     onSearch: (start: string, end: string) => void;
     onSelect: (idx: number) => void;
     getThemeColor: (idx: number, route: any) => string;
+
+
 }
 
 export default function RouteMenu({
@@ -58,8 +60,28 @@ export default function RouteMenu({
         }
     }, [debouncedEnd, activeInput]);
 
+    // const handleSelectPlace = (type: 'start' | 'end', place: TmapPoi) => {
+    //     const selectedData = { display: place.name, value: place.fullAddress };
+    //     setActiveInput(null);
+
+    //     if (type === 'start') {
+    //         setStartPoint(selectedData);
+    //         setStartResults([]);
+    //     } else {
+    //         setEndPoint(selectedData);
+    //         setEndResults([]);
+    //     }
+    // };
+
+    // 1. 장소 선택 시 좌표 정보를 함께 세팅
     const handleSelectPlace = (type: 'start' | 'end', place: TmapPoi) => {
-        const selectedData = { display: place.name, value: place.fullAddress };
+        const selectedData: PointState = {
+            display: place.name,
+            value: place.fullAddress,
+            lat: place.frontLat, // TmapPoi의 위도
+            lon: place.frontLon  // TmapPoi의 경도
+        };
+
         setActiveInput(null);
 
         if (type === 'start') {
@@ -71,16 +93,27 @@ export default function RouteMenu({
         }
     };
 
+    // 2. 검색 클릭 시 로직 분기
     const handleSearchClick = () => {
-        console.log("@검색 클릭 : ", startPoint, endPoint);
-        const startFinal = startPoint.value ? `${startPoint.value} ${startPoint.display}` : startPoint.display;
-        const endFinal = endPoint.value ? `${endPoint.value} ${endPoint.display}` : endPoint.display;
+        // 좌표가 있으면 좌표 우선, 없으면 주소 문자열 사용
+        const getFinalValue = (p: PointState) => {
+            // 좌표가 있는 경우: "경도,위도" 형식으로 전송 (Tmap API 표준)
+            if (p.lat && p.lon) {
+                return `${p.lon},${p.lat}`;
+            }
+            // 직접 입력하여 좌표가 없는 경우: 기존처럼 주소 문자열 전송
+            return p.value || p.display;
+        };
+
+        const startFinal = getFinalValue(startPoint);
+        const endFinal = getFinalValue(endPoint);
+
         onSearch(startFinal, endFinal);
     };
 
     return (
         <div className="flex flex-col h-full bg-slate-50">
-            {/* 상단 검색 영역 (기존 디자인 유지) */}
+            {/* 상단 검색 영역 */}
             <div className="p-6 bg-slate-900 text-white space-y-4">
                 <div className="space-y-3">
                     {/* 출발지 */}
@@ -92,7 +125,12 @@ export default function RouteMenu({
                             value={startPoint.display}
                             onChange={(e) => {
                                 setActiveInput('start');
-                                setStartPoint({ display: e.target.value, value: '' });
+                                setStartPoint({
+                                    display: e.target.value,
+                                    value: '',
+                                    lat: undefined,
+                                    lon: undefined
+                                });
                             }}
                         />
                         {startResults.length > 0 && (

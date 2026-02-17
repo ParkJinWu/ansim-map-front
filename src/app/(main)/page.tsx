@@ -15,6 +15,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { FavoriteResponse } from '@/services/favorite/type';
 import { LocateFixed } from 'lucide-react';
 import { useFavoriteStore } from '@/store/useFavoriteStore';
+import { addRecentPath } from '@/services/recentPath/api';
 
 const MENU_TABS = [
   { title: "장소 검색", id: "place" },
@@ -53,9 +54,25 @@ export default function AnsimMapPage() {
       if (data && data.length > 0) {
         setCarRoutes(data);
         setSelectedIdx(0);
-
-        // 2. 지도에 첫 번째 경로 그리기
         drawRoute(data[0], getRouteThemeColor(0, data[0]));
+
+        // ✅ [추가] 최근 경로 저장 로직 (비동기로 조용히 실행)
+        // data[0]에 출발지/목적지의 상세 정보(위경도 등)가 포함되어 있다고 가정합니다.
+        const firstRoute = data[0];
+
+        if (isAuthenticated) {
+          addRecentPath({
+            startPlaceName: startPoint.display || "출발지",
+            startAddressName: startAddr,
+            startLatitude: Number(firstRoute.startLat), // String을 Number로 변환
+            startLongitude: Number(firstRoute.startLon),
+            endPlaceName: endPoint.display || "목적지",
+            endAddressName: endAddr,
+            endLatitude: Number(firstRoute.endLat),
+            endLongitude: Number(firstRoute.endLon),
+          }).catch(err => console.error("최근 경로 저장 실패:", err));
+        }
+
       } else {
         alert("검색 결과가 없습니다.");
       }

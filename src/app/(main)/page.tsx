@@ -115,11 +115,19 @@ export default function AnsimMapPage() {
           {activeTab === "place" ? (
             <PlaceMenu
               onMoveMap={moveMap}
-              onSetRoute={(type, place) => {
-                const data = { display: place.name, value: place.address };
+              onSetRoute={(type, place: any) => {
+                // 장소 검색 결과를 길찾기 입력값으로 세팅하는 로직
+                const data = {
+                  display: place.name || place.placeName || place.alias,
+                  value: place.address || place.addressName,
+                  lat: place.lat || place.latitude?.toString(),
+                  lon: place.lon || place.longitude?.toString()
+                };
+
                 if (type === 'start') setStartPoint(data);
                 else setEndPoint(data);
-                setActiveTab("route"); // 탭 자동 전환
+
+                setActiveTab("route");
               }}
             />
           ) : (
